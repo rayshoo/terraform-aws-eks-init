@@ -4,16 +4,18 @@
 
 resource "kubectl_manifest" "karpenter_node_template" {
   yaml_body = <<-YAML
-    apiVersion: karpenter.k8s.aws/v1alpha1
-    kind: AWSNodeTemplate
+    apiVersion: karpenter.k8s.aws/v1beta1
+    kind: EC2NodeClass
     metadata:
       name: default
     spec:
-      subnetSelector:
-        karpenter.sh/discovery: ${var.cluster_name}
-      securityGroupSelector:
-        karpenter.sh/discovery: ${var.cluster_name}
-      instanceProfile: ${module.eks_init.karpenter.node_instance_profile_name}
+      role: KarpenterNodeRole-prac-eks
+      subnetSelectorTerms:
+      - tags:
+          karpenter.sh/discovery: ${var.cluster_name}
+      securityGroupSelectorTerms:
+      - tags:
+          karpenter.sh/discovery: ${var.cluster_name}
       tags:
         karpenter.sh/discovery: ${var.cluster_name}
   YAML
@@ -25,8 +27,8 @@ resource "kubectl_manifest" "karpenter_node_template" {
 
 resource "kubectl_manifest" "karpenter_provisioner_default" {
   yaml_body = <<-YAML
-    apiVersion: karpenter.sh/v1alpha5
-    kind: Provisioner
+    apiVersion: karpenter.sh/v1beta1
+    kind: NodePool
     metadata:
       name: default
     spec:
@@ -55,7 +57,7 @@ resource "kubectl_manifest" "karpenter_provisioner_default" {
       limits:
         resources:
           cpu: 1k
-      providerRef:
+      nodeClassRef:
         name: default
       consolidation:
         enabled: true
